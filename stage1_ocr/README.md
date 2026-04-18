@@ -191,6 +191,76 @@ square *before* resizing to `28×28` (`_crop_and_pad_square`, 20% margin) —
 otherwise narrow glyphs like `1`, `l`, `I`, and `i` would be stretched out of
 shape.
 
+### Training setup
+
+| Item | Value |
+| --- | --- |
+| Dataset | EMNIST `balanced` (47 classes) |
+| Train / Val / Test | 101,520 / 11,280 / 18,800 (90 / 10 split of EMNIST train, EMNIST test untouched) |
+| Image size | 1 × 28 × 28, normalized with `mean=0.1307`, `std=0.3081` |
+| Augmentation | Light affine jitter (train only) |
+| Loss | Cross-entropy + class weights + label smoothing |
+| Optimizer search | Adam / AdamW / SGD+momentum |
+| Scheduler search | none / cosine |
+| Tuning | Optuna TPE, 20 trials × 3 epochs on a 25K subset, `MedianPruner` (7 pruned, 13 completed) |
+| Final training | 60 epochs on the full train set, best-val-acc checkpoint kept |
+| Hardware time | ~54 min for the final 60-epoch retrain (CPU/MPS, batch 64) |
+
+**Best Optuna config (used for the final retrain and shipped in `recognition_cnn.pt`):**
+
+| Hyper-parameter | Value |
+| --- | --- |
+| `lr` | 0.00677 |
+| `batch_size` | 64 |
+| `optimizer` | `adamw` |
+| `scheduler` | `cosine` |
+| `dropout` | 0.103 |
+| `label_smoothing` | 0.05 |
+| `conv1_ch` | 48 |
+| `conv2_ch` | 32 |
+| `fc_dim` | 256 |
+| Parameter count | **472,911** |
+
+> Note: the best Optuna config (above) is what actually ships; the static
+> diagram above (32 → 64, FC 128) is the default `RecognitionCNN()` constructor.
+
+### Training & evaluation results
+
+| Metric | Value |
+| --- | --- |
+| Best Optuna trial val accuracy (3-epoch tuning, 25K subset) | **0.8849** |
+| Best validation accuracy (60-epoch final retrain) | **0.9106** |
+| Final-epoch train / val accuracy | 0.9133 / 0.9096 |
+| Final-epoch train / val loss | 0.6334 / 0.6209 |
+| **Test accuracy (18,800 samples)** | **0.9057** |
+| **Macro F1 (47 classes)** | **0.9048** |
+| **Weighted F1** | **0.9048** |
+
+**Where it does well vs. struggles** (per-class on the EMNIST test split, 400 samples per class):
+
+| Class | Precision | Recall | F1 |
+| --- | --- | --- | --- |
+| `3` | 0.998 | 0.990 | 0.994 |
+| `7` | 0.973 | 0.998 | 0.985 |
+| `4` | 0.977 | 0.963 | 0.970 |
+| `8` | 0.963 | 0.968 | 0.965 |
+| `2` | 0.916 | 0.928 | 0.922 |
+| `1` | 0.576 | 0.705 | 0.634 |
+| `0` | 0.655 | 0.750 | 0.699 |
+| `9` | 0.721 | 0.868 | 0.788 |
+| `L` | 0.703 | 0.473 | 0.565 |
+| `O` | 0.718 | 0.625 | 0.668 |
+| `f` | 0.700 | 0.658 | 0.678 |
+| `I` | 0.650 | 0.715 | 0.681 |
+| `q` | 0.781 | 0.623 | 0.693 |
+| `F` | 0.707 | 0.705 | 0.706 |
+| `g` | 0.791 | 0.730 | 0.759 |
+
+The pattern matches the [known weak spots](#performance-notes): the lowest
+F1s are exactly the OCR look-alikes (`0/O`, `1/l/I`, `q/g`, `L`, `f/F`),
+i.e. character pairs that look nearly identical even to a human at 28×28.
+Pure digits `2`–`8` are essentially solved (F1 ≥ 0.92).
+
 ---
 
 ## Denoising autoencoder
@@ -198,7 +268,7 @@ shape.
 A small **symmetric, fully-convolutional encoder–decoder** (`DenoisingAutoEncoder`
 in `pipeline.py` and `denoising/train_denoising_autoencoder.ipynb`) trained on
 NoisyOffice plus the synthetic Gaussian / salt-and-pepper variants produced by
-`generate_noisy_images.py`. ~30 K parameters, trained with MSE + Adam for 30
+`generate_noisy_images.py`. ~10 K parameters, trained with MSE + Adam for 30
 epochs at `540 × 420`.
 
 ### Diagram
@@ -225,10 +295,43 @@ flowchart LR
 ### Design rationale
 
 - **Symmetric Conv / ConvTranspose pairs.** Output size matches input with no padding bookkeeping.
-- **Channel ramp 1 → 6 → 12 → 24 → 64.** Wide bottleneck handles multiple noise types while staying ~30 K params — a good fit for the small NoisyOffice dataset.
+- **Channel ramp 1 → 6 → 12 → 24 → 64.** Wide bottleneck handles multiple noise types while staying ~10 K params — a good fit for the small NoisyOffice dataset.
 - **5×5 at the edges, 3×3 in the middle, 1×1 at the bottleneck.** Wider context for large stains outside, cheap channel mixing at the centre.
 - **ReLU hidden, Sigmoid output.** Output stays in `[0, 1]` to match the MSE target range.
 - **No skip connections.** Kept small on purpose to avoid overfitting; U-Net skips are the natural next upgrade.
+
+### Training setup
+
+| Item | Value |
+| --- | --- |
+| Dataset | NoisyOffice (4 real noise types: coffee stains, folds, footprints, wrinkles) + synthetic Gaussian and salt-and-pepper from `generate_noisy_images.py` |
+| Train / Val / Test pages | 108 noisy / 18 clean per split (each clean page paired with all 6 noise variants) |
+| Image size | 1 × 540 × 420 grayscale, pixel values in `[0, 1]` |
+| Loss | MSE between denoised output and the matching clean page |
+| Optimizer | Adam (`lr=1e-3`, `weight_decay=1e-5`) |
+| Epochs | 30 |
+| Parameter count | **10,001** |
+
+### Training & evaluation results
+
+| Metric | Value |
+| --- | --- |
+| Final-epoch **train MSE** | **0.003598** |
+| Final-epoch **validation MSE** | **0.003381** |
+| **Test MSE** | **0.003313** |
+| Wall-clock training time | ~2 min for 30 epochs (~4.2 s / epoch) |
+
+Validation loss tracks training loss closely throughout (no visible
+overfitting on the 18-page validation split), and test MSE actually comes
+in *slightly* below validation MSE — an indication that the synthetic
+Gaussian / salt-and-pepper augmentation generalizes well across the
+NoisyOffice splits. Output quality is best judged visually in the
+notebook's per-noise-type sample grid; numerically, an MSE of `~3.3e-3`
+on `[0, 1]`-scaled grayscale corresponds to an average per-pixel error
+of roughly `0.057` (~14 / 255).
+
+> Only MSE is logged. PSNR / SSIM aren't computed in the current notebook —
+> good candidates if the autoencoder gets a U-Net upgrade.
 
 ---
 
