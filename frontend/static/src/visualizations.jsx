@@ -24,7 +24,7 @@ function DenoisedPanel({ denoisedImage, characterData, style }){
     const rendH = nH * scale;
     const offX = pad + (availW - rendW) / 2;
     const offY = pad + (availH - rendH) / 2;
-    ctx.strokeStyle = "rgba(220,40,40,0.85)";
+    ctx.strokeStyle = "rgba(0,200,160,0.85)";
     ctx.lineWidth = 1.5;
     for (const item of characterData){
       const [x, y, w, h] = item.bbox;
@@ -93,7 +93,6 @@ function DecompressPanel({ original, recovered }) {
 
   return (
     <div style={{ padding: "16px", background: "rgba(0,255,200,0.03)", borderTop: "1px solid var(--rule)" }}>
-      {/* Badge */}
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 8,
@@ -110,7 +109,6 @@ function DecompressPanel({ original, recovered }) {
         </div>
       </div>
 
-      {/* Split panels */}
       <div style={{ display: "flex", gap: 12 }}>
         <div style={panelStyle}>
           <div style={titleStyle}>OCR Source Text</div>
@@ -135,6 +133,18 @@ function HuffmanStepsPanel({ recognized, finalTree, finalCodeMap }) {
   const [loading, setLoading] = React.useState(false);
   const [stepIdx, setStepIdx] = React.useState(null);
   const [mode, setMode] = React.useState("final");
+  const [playing, setPlaying] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!playing || !steps) return;
+    const id = setInterval(() => {
+      setStepIdx(i => {
+        if (i >= steps.length - 1) { setPlaying(false); return i; }
+        return i + 1;
+      });
+    }, 600);
+    return () => clearInterval(id);
+  }, [playing, steps]);
 
   const loadSteps = async () => {
     if (steps) { setMode("steps"); setStepIdx(0); return; }
@@ -162,7 +172,6 @@ function HuffmanStepsPanel({ recognized, finalTree, finalCodeMap }) {
 
   return (
     <div style={{ borderTop: "1px solid var(--rule)", padding: "16px" }}>
-      {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ fontFamily: "var(--mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--ink-3)" }}>
           Huffman tree · input: <span style={{ color: "var(--ink)", fontWeight: 600, textTransform: "none" }}>"{recognized}"</span>
@@ -188,15 +197,18 @@ function HuffmanStepsPanel({ recognized, finalTree, finalCodeMap }) {
         </div>
       </div>
 
-      {/* Step controls */}
       {mode === "steps" && steps && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <button onClick={() => setStepIdx(i => Math.max(0, i - 1))} disabled={stepIdx === 0}
+          <button
+            onClick={() => { setPlaying(p => !p); if (stepIdx >= steps.length - 1) setStepIdx(0); }}
+            style={{ fontFamily: "var(--mono)", fontSize: 12, padding: "2px 10px", borderRadius: 3, border: "1px solid var(--rule)", background: playing ? "rgba(0,200,160,0.12)" : "transparent", cursor: "pointer", color: playing ? "rgba(0,160,120,1)" : "var(--ink-2)", minWidth: 36 }}
+          >{playing ? "⏸" : "▶"}</button>
+          <button onClick={() => { setPlaying(false); setStepIdx(i => Math.max(0, i - 1)); }} disabled={stepIdx === 0}
             style={{ fontFamily: "var(--mono)", fontSize: 12, padding: "2px 10px", borderRadius: 3, border: "1px solid var(--rule)", background: "transparent", cursor: "pointer", color: "var(--ink-2)" }}>←</button>
           <input type="range" min={0} max={steps.length - 1} value={stepIdx}
-            onChange={e => setStepIdx(Number(e.target.value))}
+            onChange={e => { setPlaying(false); setStepIdx(Number(e.target.value)); }}
             style={{ flex: 1, accentColor: "rgba(0,180,140,1)" }} />
-          <button onClick={() => setStepIdx(i => Math.min(steps.length - 1, i + 1))} disabled={stepIdx === steps.length - 1}
+          <button onClick={() => { setPlaying(false); setStepIdx(i => Math.min(steps.length - 1, i + 1)); }} disabled={stepIdx === steps.length - 1}
             style={{ fontFamily: "var(--mono)", fontSize: 12, padding: "2px 10px", borderRadius: 3, border: "1px solid var(--rule)", background: "transparent", cursor: "pointer", color: "var(--ink-2)" }}>→</button>
           <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
             step {stepIdx + 1} / {steps.length}
@@ -204,7 +216,6 @@ function HuffmanStepsPanel({ recognized, finalTree, finalCodeMap }) {
         </div>
       )}
 
-      {/* Step badge */}
       {mode === "steps" && steps && currentStep && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
           <span style={{
@@ -266,8 +277,8 @@ function StepperView({ stage, progress, result, sample, onViewResults }){
           const isDecompress = i === 2;
           const highlighted = (isOcr && expandedOcr) || (isCompress && expandedCompress);
           const clickable = (isOcr && ocrClickable) || (isCompress && compressClickable) || (isDecompress && decompressClickable);
-          const onClick = isOcr && ocrClickable ? () => setExpandedOcr(v => !v)
-            : isCompress && compressClickable ? () => setExpandedCompress(v => !v)
+          const onClick = isOcr && ocrClickable ? () => { setExpandedOcr(v => !v); setExpandedCompress(false); }
+            : isCompress && compressClickable ? () => { setExpandedCompress(v => !v); setExpandedOcr(false); }
             : isDecompress && decompressClickable ? () => onViewResults && onViewResults()
             : undefined;
           const expanded = isOcr ? expandedOcr : isCompress ? expandedCompress : false;
