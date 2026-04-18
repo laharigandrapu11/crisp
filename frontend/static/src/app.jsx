@@ -6,6 +6,7 @@ function App(){
   const [drag, setDrag] = React.useState(false);
   const [history, setHistory] = React.useState([]);
   const [payloadExpanded, setPayloadExpanded] = React.useState(false);
+  const [bitsExpanded, setBitsExpanded] = React.useState(false);
   const [extractedExpanded, setExtractedExpanded] = React.useState(false);
   const [recoveredExpanded, setRecoveredExpanded] = React.useState(false);
   const fileRef = React.useRef(null);
@@ -80,8 +81,8 @@ function App(){
     }
     if (state.result){
       return <div className="status-banner ok">
-        <span style={{ color: "var(--ok)", fontWeight: 600 }}>✓ LOSSLESS</span>
-        <span className="muted">Recovered “{state.result.recovered}” matches original · {fmtMs(state.result.totalLatency)} end-to-end</span>
+        <span style={{ color: state.result.lossless ? "var(--ok)" : "rgba(220,50,50,1)", fontWeight: 600 }}>{state.result.lossless ? "LOSSLESS" : "MISMATCH"}</span>
+        <span className="muted">{state.result.lossless ? `Recovered matches original` : `Mismatch — decompress output differs`} · {fmtMs(state.result.totalLatency)} end-to-end</span>
       </div>;
     }
     return <div className="status-banner idle"><span className="muted">Idle — choose a sample or drop an image to begin.</span></div>;
@@ -97,8 +98,6 @@ function App(){
           </div>
           <div className="masthead-meta">
             <span className="pill"><span className="live-dot"/> services online</span>
-            <span>stage1 · us-central1</span>
-            <span>stage2 · us-central1</span>
           </div>
         </div>
       </header>
@@ -117,7 +116,7 @@ function App(){
             <section className="panel">
               <div className="panel-head">
                 <span className="title">Upload image</span>
-                <span className="meta">PNG · JPG · ≤ 5 MB</span>
+                <span className="meta">PNG · JPG</span>
               </div>
               <div className="panel-body">
                 <div
@@ -177,7 +176,6 @@ function App(){
                 <span className="meta">raw input</span>
               </div>
               <div className="preview">
-                <div className="badge">stage 0 · raw</div>
                 {selected.src
                   ? <img src={selected.src} alt={selected.label} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "8px" }} />
                   : selected.imageBase64
@@ -224,7 +222,7 @@ function App(){
               }}>
                     <div className="panel-head">
                   <span className="title">Results</span>
-                  <span className="meta">{state.result ? <>ready &nbsp;<span style={{ color: "var(--ok)", fontWeight: 600, fontSize: 10 }}>✓ lossless</span></> : "pending"}</span>
+                  <span className="meta">{state.result ? <>ready &nbsp;<span style={{ color: state.result.lossless ? "var(--ok)" : "rgba(220,50,50,1)", fontWeight: 600, fontSize: 10 }}>{state.result.lossless ? "\u2713 lossless" : "\u2717 mismatch"}</span></> : "pending"}</span>
                 </div>
                 <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div className="result-grid">
@@ -259,19 +257,28 @@ function App(){
                         const realBits = padLen > 0 ? dataBits.slice(0, -padLen) : dataBits;
                         const padBits  = padLen > 0 ? dataBits.slice(-padLen) : "";
                         const realGroups = realBits.match(/.{1,8}/g) || [];
+                        const visibleGroups = bitsExpanded ? realGroups : realGroups.slice(0, 16);
                         return (
                           <div style={{ marginTop: 8 }}>
                             <div style={{ fontFamily: "var(--mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--ink-3)", marginBottom: 4 }}>
                               bit string · {realBits.length} data bits + {padLen} padding
                             </div>
                             <div style={{ fontFamily: "var(--mono)", fontSize: 11, lineHeight: 1.8, wordBreak: "break-all" }}>
-                              {realGroups.map((g, i) => (
+                              {visibleGroups.map((g, i) => (
                                 <span key={i}>
                                   <span style={{ color: i % 2 === 0 ? "var(--ink)" : "var(--ink-3)" }}>{g}</span>
                                   {" "}
                                 </span>
                               ))}
-                              {padBits && <span style={{ color: "rgba(180,140,100,0.6)", letterSpacing: "0.05em" }} title="padding bits">{padBits}</span>}
+                              {!bitsExpanded && realGroups.length > 16 && (
+                                <span onClick={() => setBitsExpanded(true)} style={{ color: "var(--ok)", cursor: "pointer", fontWeight: 600 }}>
+                                  {" +"}{ realGroups.length - 16} more bytes
+                                </span>
+                              )}
+                              {bitsExpanded && padBits && <span style={{ color: "rgba(180,140,100,0.6)", letterSpacing: "0.05em" }} title="padding bits">{padBits}</span>}
+                              {bitsExpanded && (
+                                <span onClick={() => setBitsExpanded(false)} style={{ color: "var(--ink-4)", cursor: "pointer", display: "block", marginTop: 6 }}>collapse</span>
+                              )}
                             </div>
                           </div>
                         );
@@ -313,8 +320,8 @@ function App(){
         </div>
 
         <div className="foot">
-          <div>CRISP · neural compression · hackathon build</div>
-          <div>GCP Cloud Run · streamlit · tf.keras · adaptive huffman</div>
+          <div>CRISP · neural compression</div>
+          <div>tf.keras · adaptive huffman · vitter algorithm v</div>
         </div>
       </main>
 
