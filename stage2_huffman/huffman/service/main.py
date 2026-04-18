@@ -54,6 +54,13 @@ def compress(req: CompressRequest) -> CompressResponse:
     )
 
 
+@app.post("/compress/steps")
+def compress_steps_endpoint(req: CompressRequest):
+    if not req.text:
+        raise HTTPException(status_code=400, detail="empty input")
+    return {"steps": vitter.compress_steps(req.text)}
+
+
 @app.post("/decompress", response_model=DecompressResponse)
 def decompress(req: DecompressRequest) -> DecompressResponse:
     if not req.payload_base64:
