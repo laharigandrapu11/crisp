@@ -6,7 +6,7 @@ import glob
 from integration.pipeline import warmup, run_pipeline
 
 REPO_ROOT = os.path.join(os.path.dirname(__file__), "..")
-DEFAULT_IMAGES_DIR = os.path.join(REPO_ROOT, "tests")
+DEFAULT_IMAGES_DIR = os.path.join(REPO_ROOT, "tests", "benchmark_images")
 
 
 def find_images(directory):

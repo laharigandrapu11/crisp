@@ -193,13 +193,6 @@ The numbers in [End-to-end benchmarks](#end-to-end-benchmarks) reflect post-warm
 
 ---
 
-## Team
-
-- **Person A** - Stage 1: OCR pipeline (denoising autoencoder, segmentation, recognition CNN)
-- **Person B** - Stage 2: Adaptive Huffman compression service (Vitter Algorithm V from scratch)
-- **Person C** - Integration, benchmarking harness, frontend visualization
-
----
 
 ## References
 
