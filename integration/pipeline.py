@@ -24,7 +24,10 @@ def run_pipeline(image_path):
     t0 = time.time()
     r1 = requests.post(f"{STAGE1_URL}/ocr", json={"image_base64": img_b64})
     t1 = time.time()
-    text = r1.json()["text"]
+    ocr_data = r1.json()
+    text = ocr_data["extracted_text"]
+    denoised_image = ocr_data.get("denoised_image", "")
+    character_data = ocr_data.get("character_data", [])
 
     r2 = requests.post(f"{STAGE2_URL}/compress", json={"text": text})
     t2 = time.time()
@@ -39,6 +42,7 @@ def run_pipeline(image_path):
     print(f"Stage1: {t1-t0:.3f}s | Compress: {t2-t1:.3f}s | Decompress: {t3-t2:.3f}s | Total: {t3-t0:.3f}s")
     print(json.dumps(metrics, indent=2))
     return {"text": text, "recovered": recovered, "metrics": metrics,
+            "denoised_image": denoised_image, "character_data": character_data,
             "latency": {"stage1": t1-t0, "compress": t2-t1, "decompress": t3-t2, "total": t3-t0}}
 
 
