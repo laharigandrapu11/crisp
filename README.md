@@ -2,7 +2,7 @@
 
 **C**ompression · **R**ecognition · **I**ntelligence · **S**ignal · **P**ipeline
 
-A two-stage neural document pipeline: scan-grade printed page -> CNN-powered OCR -> adaptive Huffman compression -> losslessly recovered text. Both stages run as independent FastAPI microservices wired together by a thin integration layer and a live React/D3 frontend.
+A two-stage neural document pipeline: noisy scanned document image -> CNN-powered OCR -> adaptive Huffman compression -> losslessly recovered text. Both stages run as independent FastAPI microservices wired together by a thin integration layer and a live React/D3 frontend.
 
 > **20 / 20 lossless** on the benchmark set, **mean compression ratio 1.88x**, and **mean end-to-end latency 181 ms** per page. See [End-to-end benchmarks](#end-to-end-benchmarks) for the full numbers from [`docs/metrics.json`](docs/metrics.json).
 
@@ -70,8 +70,9 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r stage1_ocr/requirements.txt
 pip install -r stage2_huffman/requirements.txt
 
-uvicorn main:app --app-dir stage1_ocr --port 8000 &
-uvicorn huffman.service.main:app --app-dir stage2_huffman --port 8001 &
+cd stage1_ocr && uvicorn main:app --port 8000 &
+cd .. && cd stage2_huffman && uvicorn huffman.service.main:app --port 8001 &
+cd ..
 
 python frontend/server.py
 ```
@@ -93,7 +94,7 @@ curl -s -X POST http://localhost:8001/compress \
 Or run the full benchmark in one shot:
 
 ```bash
-python integration/benchmark.py    # writes docs/metrics.json
+python -m integration.benchmark    # writes docs/metrics.json
 ```
 
 ---
@@ -110,7 +111,7 @@ crisp/
 │   ├── CONTRACTS.md
 │   ├── DEPLOYMENT.md
 │   └── metrics.json
-├── tests/              # Cross-stage tests
+├── tests/              # Benchmark image fixtures (tests/benchmark_images/)
 ├── deploy.sh
 └── README.md
 ```
@@ -178,7 +179,7 @@ The wire format between Stage 1, Stage 2, and the frontend is defined in [`docs/
 - `POST /decompress` -> `{ text }`
 - `POST /compress/steps` -> `{ steps: [{ step, char, is_new, swaps, tree, codes }, ...] }`
 
-All errors use a consistent `{"error": "..."}` envelope with appropriate HTTP status codes.
+Stage 2 errors use a `{"error": "..."}` envelope. Stage 1 uses FastAPI's default `{"detail": "..."}` shape. Both use standard HTTP status codes (400 for bad input, 422 for validation failures, 500 for server faults).
 
 ---
 
@@ -192,7 +193,6 @@ All errors use a consistent `{"error": "..."}` envelope with appropriate HTTP st
 The numbers in [End-to-end benchmarks](#end-to-end-benchmarks) reflect post-warmup latencies on a single CPU-only machine. Stage 1 accounts for roughly 61% of total latency; Stage 2 compress + decompress together take about 70 ms per page.
 
 ---
-
 
 ## References
 
