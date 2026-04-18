@@ -1,6 +1,3 @@
-import os
-from typing import Literal
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -9,8 +6,6 @@ from pipeline import ocr as run_ocr
 # Run with: uvicorn main:app --port 8000
 
 app = FastAPI()
-
-DEFAULT_RECOG_MODEL: Literal["cnn", "effnet"] = os.getenv("RECOG_MODEL", "cnn")
 
 
 class OCRRequest(BaseModel):
@@ -46,7 +41,7 @@ def ocr(req: OCRRequest):
         raise HTTPException(status_code=400, detail="image_base64 is required")
 
     try:
-        return run_ocr(req.image_base64, recog_model=DEFAULT_RECOG_MODEL)
+        return run_ocr(req.image_base64)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except FileNotFoundError as e:

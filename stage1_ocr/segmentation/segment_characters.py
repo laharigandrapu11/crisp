@@ -1,22 +1,10 @@
-"""Character segmentation for printed text using a minimal classical CV pipeline.
+"""Segment characters from a printed-text image.
 
-Pipeline:
-    1. Grayscale + light Gaussian blur
-    2. Otsu binarization (inverted so text = 255)
-    3. Line segmentation via horizontal projection profile
-    4. Word segmentation per line via vertical projection profile with an
-       adaptive word-gap threshold
-    5. Character segmentation per word via connected components
-    6. Split any connected component wider than ~1.4x the global median
-       character width by cutting at the lowest points in its smoothed
-       vertical projection profile (handles touching glyphs in italic /
-       typewriter fonts)
-
-Outputs structured JSON (lines > words > chars) and a visualization PNG with
-character bounding boxes drawn in red.
+Pipeline: binarize -> split into lines -> split into words -> connected
+components per word, splitting any too-wide blob at projection minima.
 
 Usage:
-    python segment_characters.py --image path/to/page.png --out-dir out/
+    python segment_characters.py --image page.png --out-dir out/
 """
 
 from __future__ import annotations
@@ -35,31 +23,25 @@ def preprocess(img: np.ndarray) -> np.ndarray:
 
 
 def binarize(gray: np.ndarray) -> np.ndarray:
-    """Otsu threshold, inverted so text pixels are 255 (foreground)."""
+    # Inverted Otsu so text pixels are 255.
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     return binary
 
 
 def _runs(mask: np.ndarray) -> list[tuple[int, int]]:
-    """Return [(start, end_exclusive), ...] of True runs in a 1-D bool array."""
+    """Return [(start, end_exclusive), ...] for True runs in a 1-D bool array."""
     if not mask.any():
         return []
     padded = np.concatenate([[False], mask, [False]])
     diff = np.diff(padded.astype(np.int8))
-    starts = np.where(diff == 1)[0]
-    ends = np.where(diff == -1)[0]
+    starts = np.nonzero(diff == 1)[0]
+    ends = np.nonzero(diff == -1)[0]
     return list(zip(starts.tolist(), ends.tolist()))
 
 
 def segment_lines(
     binary: np.ndarray, min_line_height: int = 4
 ) -> list[tuple[int, int]]:
-    """Segment text lines via horizontal projection profile.
-
-    Keeps runs of rows where row_ink exceeds 5% of the max row ink, which is
-    low enough to include ascenders/descenders but high enough to cut
-    inter-line whitespace.
-    """
     row_ink = binary.sum(axis=1) / 255.0
     if row_ink.max() == 0:
         return []
@@ -75,20 +57,12 @@ def segment_lines(
 
 
 def adaptive_word_gap(col_ink: np.ndarray) -> int:
-    """Pick an adaptive inter-word gap threshold (in pixels).
-
-    Collect widths of all zero-ink runs inside the line, sort them, and find
-    the largest multiplicative jump in sorted widths -- that jump is the
-    natural split between intra-word and inter-word gaps. Falls back to a
-    very large value (effectively: no splits) when the line has too few gaps
-    to compare reliably.
-    """
+    # Pick the largest jump in sorted gap widths as the word/char split.
     zero_runs = _runs(col_ink == 0)
     if len(zero_runs) < 3:
         return 10**9
 
     widths = sorted(e - s for s, e in zero_runs)
-    # Drop the leading/trailing gaps (image margins) when we have enough data.
     trimmed = widths[1:-1] if len(widths) > 4 else widths
     arr = np.array(trimmed, dtype=np.float32)
     if arr.size < 2:
@@ -96,7 +70,6 @@ def adaptive_word_gap(col_ink: np.ndarray) -> int:
 
     ratios = arr[1:] / np.maximum(arr[:-1], 1e-3)
     jump_idx = int(np.argmax(ratios))
-    # Require a meaningful jump; otherwise treat the whole line as one word.
     if ratios[jump_idx] < 1.8:
         return max(widths) + 1
 
@@ -104,7 +77,6 @@ def adaptive_word_gap(col_ink: np.ndarray) -> int:
 
 
 def segment_words(line_bin: np.ndarray) -> list[tuple[int, int]]:
-    """Split a line into word bands using an adaptive column-gap threshold."""
     col_ink = line_bin.sum(axis=0) / 255.0
     word_gap = adaptive_word_gap(col_ink)
 
@@ -126,7 +98,6 @@ def segment_words(line_bin: np.ndarray) -> list[tuple[int, int]]:
 def _raw_components(
     word_bin: np.ndarray, min_area: int
 ) -> list[tuple[int, int, int, int]]:
-    """Return filtered connected components as (x, y, w, h) in word-local coords."""
     n_labels, _, stats, _ = cv2.connectedComponentsWithStats(word_bin, connectivity=8)
     boxes: list[tuple[int, int, int, int]] = []
     for i in range(1, n_labels):
@@ -143,15 +114,7 @@ def _split_wide_cc(
     target_width: float,
     wide_ratio: float = 1.4,
 ) -> list[tuple[int, int, int, int]]:
-    """Split a too-wide connected component at vertical-projection minima.
-
-    If the CC's width is at least `wide_ratio * target_width`, estimate
-    `n = round(w / target_width)` pieces and cut at the n-1 smallest smoothed
-    column-ink values inside the CC. Cuts are forced to be at least one
-    target-width apart so we don't slice a single glyph in half. Returns
-    tight-cropped (x, y, w, h) pieces; falls back to the original box if no
-    good cuts are found.
-    """
+    # Cut touching glyphs at the lowest points of a smoothed column profile.
     x, y, w, h = box
     if w < wide_ratio * target_width:
         return [box]
@@ -190,8 +153,8 @@ def _split_wide_cc(
         sub = roi[:, a:b]
         if sub.max() == 0:
             continue
-        ys = np.where(sub.any(axis=1))[0]
-        xs = np.where(sub.any(axis=0))[0]
+        ys = np.nonzero(sub.any(axis=1))[0]
+        xs = np.nonzero(sub.any(axis=0))[0]
         if ys.size == 0 or xs.size == 0:
             continue
         px = x + a + int(xs[0])
@@ -206,11 +169,6 @@ def _split_wide_cc(
 def segment_chars(
     word_bin: np.ndarray, min_area: int, target_width: float
 ) -> list[tuple[int, int, int, int]]:
-    """Extract character bounding boxes from a word.
-
-    Uses connected components as initial candidates, then force-splits any
-    component wider than ~1.4x `target_width` via vertical-projection minima.
-    """
     raw = _raw_components(word_bin, min_area)
     boxes: list[tuple[int, int, int, int]] = []
     for cc in raw:
@@ -224,11 +182,7 @@ def _estimate_global_median_width(
     line_bands: list[tuple[int, int]],
     min_area: int,
 ) -> float:
-    """Estimate the typical single-character width across the whole image.
-
-    Uses connected components whose height is within [0.4, 1.2]x the median
-    line height so descenders/noise/ligatures don't skew the estimate.
-    """
+    # Median CC width across lines, ignoring tiny noise and tall ligatures.
     if not line_bands:
         return 10.0
     median_line_h = float(np.median([y1 - y0 for y0, y1 in line_bands]))
@@ -312,7 +266,6 @@ def segment_image(img: np.ndarray) -> dict:
 
 
 def draw_boxes(img: np.ndarray, result: dict) -> np.ndarray:
-    """Draw red rectangles around every character box."""
     viz = img.copy() if img.ndim == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     for line in result["lines"]:
         for word in line["words"]:
