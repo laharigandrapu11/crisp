@@ -111,7 +111,6 @@ function App(){
         </div>
 
         <div className="cols">
-          {/* LEFT: Input */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <section className="panel">
               <div className="panel-head">
@@ -184,11 +183,28 @@ function App(){
                 }
               </div>
             </section>
+
+            <section className="panel">
+              <div className="panel-head">
+                <span className="title">Byte comparison</span>
+                <span className="meta">{state.result ? `${state.result.origBytes} B → ${state.result.compBytes} B` : "pending"}</span>
+              </div>
+              <div className="panel-body">
+                <BytesBar result={state.result}/>
+              </div>
+            </section>
           </div>
 
-          {/* RIGHT: Pipeline + results */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {statusBanner}
+
+            <section className="panel">
+                <div className="panel-head">
+                <span className="title">Key metrics</span>
+                <span className="meta"></span>
+              </div>
+              <HeroMetrics result={state.result} history={history}/>
+            </section>
 
             <section className="panel" style={{ position: "relative", zIndex: 1 }}>
                 <div className="panel-head">
@@ -207,15 +223,7 @@ function App(){
               </div>
             </section>
 
-            <section className="panel">
-                <div className="panel-head">
-                <span className="title">Key metrics</span>
-                <span className="meta"></span>
-              </div>
-              <HeroMetrics result={state.result} history={history}/>
-            </section>
-
-            <div className="two-col" ref={resultsRef}>
+            <div ref={resultsRef}>
               <section className="panel" style={{
                 transition: "box-shadow 0.3s",
                 boxShadow: resultsHighlighted ? "0 0 0 2px rgba(0,200,160,0.8), 0 0 24px rgba(0,200,160,0.25)" : "none"
@@ -232,8 +240,8 @@ function App(){
                         ? <span className="ocr-out">
                             {extractedExpanded ? state.result.recognized : state.result.recognized.slice(0, 120)}
                             {!extractedExpanded && state.result.recognized.length > 120
-                              ? <>{" "}<span onClick={() => setExtractedExpanded(true)} style={{ color: "var(--ink-3)", cursor: "pointer", fontSize: 10, letterSpacing: "0.08em", textDecoration: "underline", textUnderlineOffset: 3 }}>read more</span></>
-                              : extractedExpanded ? <>{" "}<span onClick={() => setExtractedExpanded(false)} style={{ color: "var(--ink-4)", cursor: "pointer", fontSize: 10, letterSpacing: "0.08em", textDecoration: "underline", textUnderlineOffset: 3 }}>show less</span></> : ""}
+                              ? <>{" "}<span onClick={() => setExtractedExpanded(true)} style={{ color: "var(--ink-3)", cursor: "pointer", fontSize: 10, letterSpacing: "0.08em", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>read more</span></>
+                              : extractedExpanded ? <>{" "}<span onClick={() => setExtractedExpanded(false)} style={{ color: "var(--ink-4)", cursor: "pointer", fontSize: 10, letterSpacing: "0.08em", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>show less</span></> : ""}
                           </span>
                         : <span className="muted" style={{ fontFamily: "var(--mono)" }}>awaiting stage 1…</span>}
                     </div>
@@ -291,29 +299,14 @@ function App(){
                         ? <span className="ocr-out">
                             {recoveredExpanded ? state.result.recovered : state.result.recovered.slice(0, 120)}
                             {!recoveredExpanded && state.result.recovered.length > 120
-                              ? <>{" "}<span onClick={() => setRecoveredExpanded(true)} style={{ color: "var(--ink-3)", cursor: "pointer", fontSize: 10, letterSpacing: "0.08em", textDecoration: "underline", textUnderlineOffset: 3 }}>read more</span></>
-                              : recoveredExpanded ? <>{" "}<span onClick={() => setRecoveredExpanded(false)} style={{ color: "var(--ink-4)", cursor: "pointer", fontSize: 10, letterSpacing: "0.08em", textDecoration: "underline", textUnderlineOffset: 3 }}>show less</span></> : ""}
+                              ? <>{" "}<span onClick={() => setRecoveredExpanded(true)} style={{ color: "var(--ink-3)", cursor: "pointer", fontSize: 10, letterSpacing: "0.08em", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>read more</span></>
+                              : recoveredExpanded ? <>{" "}<span onClick={() => setRecoveredExpanded(false)} style={{ color: "var(--ink-4)", cursor: "pointer", fontSize: 10, letterSpacing: "0.08em", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap" }}>show less</span></> : ""}
                           </span>
                         : <span className="muted" style={{ fontFamily: "var(--mono)" }}>awaiting stage 3…</span>}
                     </div>
                   </div>
 
-                  <div className="hairline"/>
-                  <div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-3)", marginBottom: 10 }}>
-                      Byte comparison
-                    </div>
-                    <BytesBar result={state.result}/>
-                  </div>
                 </div>
-              </section>
-
-              <section className="panel">
-                    <div className="panel-head">
-                  <span className="title">Detailed metrics</span>
-                  <span className="meta">per-run</span>
-                </div>
-                <DetailTable result={state.result}/>
               </section>
             </div>
           </div>
