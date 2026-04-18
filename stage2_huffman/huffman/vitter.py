@@ -131,6 +131,27 @@ def compress_with_tree(text: str) -> tuple[bytes, int, int, HuffmanTree]:
     return raw_bytes, len(data), len(bit_string), tree
 
 
+def compress_steps(text: str) -> list[dict]:
+    tree = HuffmanTree()
+    steps = []
+    for i, ch in enumerate(text.encode("utf-8"), 1):
+        is_new = ch not in tree.symbols_map
+        if not is_new:
+            leaf = tree.symbols_map[ch]
+            vitter_update(tree, leaf)
+        else:
+            new_leaf = tree.split_nyt(ch)
+            vitter_update(tree, new_leaf)
+        steps.append({
+            "step":   i,
+            "char":   chr(ch),
+            "is_new": is_new,
+            "tree":   tree.to_dict(),
+            "codes":  tree.code_map(),
+        })
+    return steps
+
+
 def decompress(raw_data: bytes) -> str:
     from .bitpack import bytes_to_bits
     return decode(bytes_to_bits(raw_data)).decode("utf-8")
