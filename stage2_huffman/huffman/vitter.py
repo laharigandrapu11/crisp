@@ -134,7 +134,19 @@ def compress_with_tree(text: str) -> tuple[bytes, int, int, HuffmanTree]:
 def compress_steps(text: str) -> list[dict]:
     tree = HuffmanTree()
     steps = []
+    swaps_this_step = []
+
+    original_swap = tree.swap.__func__
+
+    def tracking_swap(self, a, b):
+        if a is not b and a is not b.parent and b is not a.parent:
+            swaps_this_step.append([a.number, b.number])
+        original_swap(self, a, b)
+
+    HuffmanTree.swap = tracking_swap
+
     for i, ch in enumerate(text.encode("utf-8"), 1):
+        swaps_this_step.clear()
         is_new = ch not in tree.symbols_map
         if not is_new:
             leaf = tree.symbols_map[ch]
@@ -146,9 +158,12 @@ def compress_steps(text: str) -> list[dict]:
             "step":   i,
             "char":   chr(ch),
             "is_new": is_new,
+            "swaps":  list(swaps_this_step),
             "tree":   tree.to_dict(),
             "codes":  tree.code_map(),
         })
+
+    HuffmanTree.swap = original_swap
     return steps
 
 
