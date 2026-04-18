@@ -314,7 +314,7 @@ function App(){
 
         <div className="foot">
           <div>CRISP · neural compression</div>
-          <div>tf.keras · adaptive huffman · vitter algorithm v</div>
+          <div>pytorch · adaptive huffman · vitter algorithm v</div>
         </div>
       </main>
 
