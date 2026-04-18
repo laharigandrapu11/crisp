@@ -12,8 +12,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
-from torchvision import transforms
-from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
 
 from segmentation.segment_characters import segment_image
 
@@ -92,7 +90,6 @@ class RecognitionCNN(nn.Module):
 _device: torch.device | None = None
 _denoiser_cache: DenoisingAutoEncoder | None = None
 _recog_cnn_cache: tuple[RecognitionCNN, dict[str, Any]] | None = None
-_recog_effnet_cache: tuple[nn.Module, dict[str, Any]] | None = None
 
 
 def _pick_device() -> torch.device:
@@ -149,38 +146,6 @@ def _load_recog_cnn() -> tuple[RecognitionCNN, dict[str, Any]]:
     }
     _recog_cnn_cache = (model, meta)
     return _recog_cnn_cache
-
-
-def _load_recog_effnet() -> tuple[nn.Module, dict[str, Any]]:
-    global _recog_effnet_cache
-    if _recog_effnet_cache is not None:
-        return _recog_effnet_cache
-    weights_path = MODELS_DIR / "recognition_efficientnet.pt"
-    if not weights_path.is_file():
-        raise FileNotFoundError(f"EfficientNet weights not found at {weights_path}.")
-    ckpt = torch.load(weights_path, map_location=_pick_device())
-    num_classes = ckpt.get("num_classes", 62)
-    dropout = ckpt.get("best_config", {}).get("dropout", 0.2)
-
-    model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
-    in_features = model.classifier[1].in_features
-    model.classifier = nn.Sequential(
-        nn.Dropout(dropout, inplace=False),
-        nn.Linear(in_features, num_classes),
-    )
-    model.load_state_dict(ckpt["model_state_dict"])
-    model = model.to(_pick_device())
-    model.eval()
-
-    weights_meta = EfficientNet_B0_Weights.IMAGENET1K_V1.transforms()
-    meta = {
-        "label_map": ckpt["label_map"],
-        "input_size": ckpt.get("input_size", 96),
-        "mean": tuple(ckpt.get("mean", weights_meta.mean)),
-        "std": tuple(ckpt.get("std", weights_meta.std)),
-    }
-    _recog_effnet_cache = (model, meta)
-    return _recog_effnet_cache
 
 
 def _decode_image(image_base64: str) -> np.ndarray:
@@ -247,7 +212,7 @@ def _crop_and_pad_square(gray_u8: np.ndarray, bbox: tuple[int, int, int, int],
     return canvas
 
 
-def _prepare_char_tensor_cnn(
+def _prepare_char_tensor(
     canvas: np.ndarray, img_size: int, mean: tuple, std: tuple
 ) -> torch.Tensor:
     resized = cv2.resize(canvas, (img_size, img_size), interpolation=cv2.INTER_AREA)
@@ -259,58 +224,27 @@ def _prepare_char_tensor_cnn(
     return (tensor - m) / s
 
 
-_effnet_base_transform_cache: dict[int, Any] = {}
-
-
-def _prepare_char_tensor_effnet(
-    canvas: np.ndarray, input_size: int, mean: tuple, std: tuple
-) -> torch.Tensor:
-    inverted = 255 - canvas
-    pil = Image.fromarray(inverted, mode="L")
-    if input_size not in _effnet_base_transform_cache:
-        _effnet_base_transform_cache[input_size] = transforms.Compose(
-            [
-                transforms.Lambda(lambda img: img.convert("RGB")),
-                transforms.Resize(
-                    input_size,
-                    interpolation=transforms.InterpolationMode.BILINEAR,
-                ),
-                transforms.CenterCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std),
-            ]
-        )
-    return _effnet_base_transform_cache[input_size](pil)
-
-
 @torch.no_grad()
 def _recognize_words(
     gray_u8: np.ndarray,
     word_groups: list[list[tuple[int, int, int, int]]],
-    recog_model: str,
     batch_size: int = 64,
 ) -> str:
     if not word_groups:
         return ""
 
     device = _pick_device()
-    if recog_model == "cnn":
-        model, meta = _load_recog_cnn()
-        prepare = lambda canvas: _prepare_char_tensor_cnn(
-            canvas, meta["img_size"], meta["mean"], meta["std"]
-        )
-    elif recog_model == "effnet":
-        model, meta = _load_recog_effnet()
-        prepare = lambda canvas: _prepare_char_tensor_effnet(
-            canvas, meta["input_size"], meta["mean"], meta["std"]
-        )
-    else:
-        raise ValueError(f"Unknown recog_model={recog_model!r}. Use 'cnn' or 'effnet'.")
-
+    model, meta = _load_recog_cnn()
     label_map = meta["label_map"]
 
     flat_bboxes = [bb for group in word_groups for bb in group]
-    tensors = [prepare(_crop_and_pad_square(gray_u8, bb)) for bb in flat_bboxes]
+    tensors = [
+        _prepare_char_tensor(
+            _crop_and_pad_square(gray_u8, bb),
+            meta["img_size"], meta["mean"], meta["std"],
+        )
+        for bb in flat_bboxes
+    ]
 
     preds: list[int] = []
     for i in range(0, len(tensors), batch_size):
@@ -327,8 +261,8 @@ def _recognize_words(
     return " ".join(words)
 
 
-def ocr(image_base64: str, recog_model: str = "cnn") -> dict[str, Any]:
-    """Run the OCR pipeline. recog_model is 'cnn' or 'effnet'."""
+def ocr(image_base64: str) -> dict[str, Any]:
+    """Run the OCR pipeline: denoise -> segment -> recognize."""
     gray = _decode_image(image_base64)
     denoised = _denoise(gray)
 
@@ -337,7 +271,7 @@ def ocr(image_base64: str, recog_model: str = "cnn") -> dict[str, Any]:
     segmentation = segment_image(denoised_bgr)
     word_groups = _collect_word_groups(segmentation)
 
-    extracted_text = _recognize_words(denoised, word_groups, recog_model=recog_model)
+    extracted_text = _recognize_words(denoised, word_groups)
 
     flat_bboxes = [bb for group in word_groups for bb in group]
     return {
