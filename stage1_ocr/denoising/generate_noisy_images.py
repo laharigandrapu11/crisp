@@ -1,18 +1,10 @@
-"""Generate Gaussian and salt-and-pepper noisy versions of the clean grayscale
-images in the NoisyOffice-style dataset.
+"""Generate Gaussian and salt-and-pepper noisy versions of the clean images.
 
-Reads every `FontABC_Clean_EE.png` file from the clean grayscale directory and
-writes two noisy counterparts into the simulated noisy directory, following
-the existing `FontABC_NoiseD_EE.png` naming convention:
-
-    FontABC_Clean_EE.png -> FontABC_Noiseg_EE.png   (Gaussian)
-                         -> FontABC_Noises_EE.png   (salt & pepper)
-
-Requires: numpy, Pillow.
+FontABC_Clean_EE.png -> FontABC_Noiseg_EE.png  (Gaussian)
+                    -> FontABC_Noises_EE.png  (salt & pepper)
 """
 
 from __future__ import annotations
-
 
 import re
 import sys
@@ -25,23 +17,13 @@ from pathlib import Path
 CLEAN_FILENAME_RE = re.compile(r"^(Font[A-Za-z]{3})_Clean_(TR|VA|TE)\.png$")
 
 
-def add_gaussian_noise(
-    img: np.ndarray, mean: float, std: float, rng: np.random.Generator
-) -> np.ndarray:
-    """Add zero(ish)-mean Gaussian noise on the 0-255 scale, clipped to uint8."""
+def add_gaussian_noise(img, mean, std, rng):
     noise = rng.normal(loc=mean, scale=std, size=img.shape)
     noisy = img.astype(np.float32) + noise
     return np.clip(noisy, 0, 255).astype(np.uint8)
 
 
-def add_salt_pepper_noise(
-    img: np.ndarray, amount: float, ratio: float, rng: np.random.Generator
-) -> np.ndarray:
-    """Add salt-and-pepper noise.
-
-    `amount` is the fraction of pixels that get corrupted in total; `ratio`
-    controls the salt vs pepper split (ratio=0.5 -> equal salt and pepper).
-    """
+def add_salt_pepper_noise(img, amount, ratio, rng):
     if not 0.0 <= amount <= 1.0:
         raise ValueError("--sp-amount must be in [0, 1]")
     if not 0.0 <= ratio <= 1.0:
@@ -50,31 +32,19 @@ def add_salt_pepper_noise(
     out = img.copy()
     rand = rng.random(img.shape)
     salt_threshold = amount * ratio
-    pepper_threshold = amount
     out[rand < salt_threshold] = 255
-    out[(rand >= salt_threshold) & (rand < pepper_threshold)] = 0
+    out[(rand >= salt_threshold) & (rand < amount)] = 0
     return out
 
 
-def process_directory(
-    clean_dir: Path,
-    out_dir: Path,
-    gaussian_mean: float,
-    gaussian_std: float,
-    sp_amount: float,
-    sp_ratio: float,
-    seed: int,
-    overwrite: bool,
-) -> tuple[int, int, int]:
+def process_directory(clean_dir, out_dir, gaussian_mean, gaussian_std,
+                      sp_amount, sp_ratio, seed, overwrite):
     if not clean_dir.is_dir():
         raise FileNotFoundError(f"Clean image directory not found: {clean_dir}")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     rng = np.random.default_rng(seed)
-
-    written = 0
-    skipped = 0
-    unmatched = 0
+    written = skipped = unmatched = 0
 
     files = sorted(clean_dir.glob("*.png"))
     if not files:
@@ -109,7 +79,7 @@ def process_directory(
     return written, skipped, unmatched
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args():
     script_dir = Path(__file__).resolve().parent
     default_clean = script_dir / "data" / "clean_images_grayscale"
     default_out = script_dir / "data" / "simulated_noisy_images_grayscale"
@@ -126,7 +96,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:
+def main():
     args = parse_args()
     written, skipped, unmatched = process_directory(
         clean_dir=args.clean_dir,
@@ -138,10 +108,8 @@ def main() -> int:
         seed=args.seed,
         overwrite=args.overwrite,
     )
-    print(
-        f"\nDone. written={written}, skipped_existing={skipped}, "
-        f"unmatched_filenames={unmatched}"
-    )
+    print(f"\nDone. written={written}, skipped_existing={skipped}, "
+          f"unmatched_filenames={unmatched}")
     return 0
 
 
