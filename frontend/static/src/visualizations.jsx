@@ -24,10 +24,11 @@ function DenoisedPanel({ denoisedImage, characterData, style }){
     const rendH = nH * scale;
     const offX = pad + (availW - rendW) / 2;
     const offY = pad + (availH - rendH) / 2;
-    ctx.fillStyle = "rgba(0,255,200,0.15)";
+    ctx.strokeStyle = "rgba(220,40,40,0.85)";
+    ctx.lineWidth = 1.5;
     for (const item of characterData){
-      const [x1, y1, x2, y2] = item.bbox;
-      ctx.fillRect(offX + x1 * scale, offY + y1 * scale, (x2-x1) * scale, (y2-y1) * scale);
+      const [x, y, w, h] = item.bbox;
+      ctx.strokeRect(offX + x * scale, offY + y * scale, w * scale, h * scale);
     }
   };
 
@@ -39,21 +40,18 @@ function DenoisedPanel({ denoisedImage, characterData, style }){
   }, [denoisedImage, characterData]);
 
   return (
-    <div style={{ flex: 1, position: "relative", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", ...style }}>
-      <div style={{
-        position: "absolute", top: 10, left: 10,
-        fontFamily: "var(--mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em",
-        background: "rgba(0,255,200,0.12)", color: "rgba(0,180,140,1)",
-        border: "1px solid rgba(0,255,200,0.35)", padding: "3px 8px", borderRadius: 3, zIndex: 1
-      }}>stage 1 · denoised</div>
-      <img
-        ref={imgRef}
-        src={`data:image/png;base64,${denoisedImage}`}
-        alt="denoised"
-        style={{ width: "100%", height: "100%", objectFit: "contain", padding: "8px", display: "block" }}
-        onLoad={drawBoxes}
-      />
-      <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg)", ...style }}>
+      <div style={{ padding: "6px 12px", fontFamily: "var(--mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(0,180,140,1)", borderBottom: "1px solid var(--rule)", background: "var(--bg)" }}>step 1 · ocr output</div>
+      <div style={{ flex: 1, minHeight: 220, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <img
+          ref={imgRef}
+          src={`data:image/png;base64,${denoisedImage}`}
+          alt="denoised"
+          style={{ width: "100%", objectFit: "contain", padding: "8px", display: "block" }}
+          onLoad={drawBoxes}
+        />
+        <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
+      </div>
     </div>
   );
 }
@@ -299,17 +297,19 @@ function StepperView({ stage, progress, result, sample, onViewResults }){
       </div>
       {expandedOcr && result && result.denoisedImage && (
         <div style={{ borderTop: "1px solid var(--rule)" }}>
-          <div style={{ display: "flex", minHeight: 260 }}>
-            <div style={{ flex: 1, position: "relative", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid var(--rule)", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: 10, left: 10, zIndex: 2, fontFamily: "var(--mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(255,255,255,0.92)", padding: "3px 8px", borderRadius: 3, color: "var(--ink-2)" }}>stage 0 · raw</div>
-              {sample && sample.src
-                ? <img src={sample.src} alt="raw" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "8px" }} />
-                : sample && sample.imageBase64
-                  ? <img src={`data:image/png;base64,${sample.imageBase64}`} alt="raw" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "8px" }} />
-                  : null
-              }
+          <div style={{ display: "flex" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", borderRight: "1px solid var(--rule)" }}>
+              <div style={{ padding: "6px 12px", fontFamily: "var(--mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--ink-2)", borderBottom: "1px solid var(--rule)", background: "var(--bg)" }}>step 0 · raw</div>
+              <div style={{ flex: 1, minHeight: 220, background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                {sample && sample.src
+                  ? <img src={sample.src} alt="raw" style={{ width: "100%", objectFit: "contain", padding: "8px", display: "block" }} />
+                  : sample && sample.imageBase64
+                    ? <img src={`data:image/png;base64,${sample.imageBase64}`} alt="raw" style={{ width: "100%", objectFit: "contain", padding: "8px", display: "block" }} />
+                    : null
+                }
+              </div>
             </div>
-            <DenoisedPanel denoisedImage={result.denoisedImage} characterData={result.characterData} />
+            <DenoisedPanel denoisedImage={result.denoisedImage} characterData={result.characterData} style={{ flexDirection: "column" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderTop: "1px solid var(--rule)", background: "rgba(0,255,200,0.04)" }}>
             <span style={{ fontFamily: "var(--mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--ink-3)" }}>Extracted text</span>
