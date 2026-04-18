@@ -4,6 +4,8 @@
 
 A two-stage neural document pipeline: noisy scanned document image -> CNN-powered OCR -> adaptive Huffman compression -> losslessly recovered text. Both stages run as independent FastAPI microservices wired together by a thin integration layer and a live React/D3 frontend.
 
+**Live demo:** [frontend-xnnzv4dy6q-uc.a.run.app](https://frontend-xnnzv4dy6q-uc.a.run.app/) (deployed on Google Cloud Run; expect a few seconds of cold-start delay on the first request).
+
 > **20 / 20 lossless** on the benchmark set, **mean compression ratio 1.88x**, and **mean end-to-end latency 181 ms** per page. See [End-to-end benchmarks](#end-to-end-benchmarks) for the full numbers from [`docs/metrics.json`](docs/metrics.json).
 
 ---
@@ -122,6 +124,8 @@ crisp/
 
 All numbers below come straight from [`docs/metrics.json`](docs/metrics.json), produced by `python integration/benchmark.py` over a 20-image set spanning clean scans and noisy / folded / stained variants.
 
+> **Hardware:** benchmarked locally on an **Apple M4 (CPU-only, 16 GB RAM, macOS 15)**. The hosted [Cloud Run demo](https://frontend-xnnzv4dy6q-uc.a.run.app/) runs on smaller shared instances (2 vCPU / 2 GB per service) and will be noticeably slower per request, especially on cold starts.
+
 | Metric | Value |
 | --- | --- |
 | Images run | **20** |
@@ -190,7 +194,7 @@ Stage 2 errors use a `{"error": "..."}` envelope. Stage 1 uses FastAPI's default
 >
 > **Action:** Send a single dummy image through the pipeline on startup before running latency benchmarks. `integration/pipeline.py::warmup()` does this automatically and is called by `integration/benchmark.py`.
 
-The numbers in [End-to-end benchmarks](#end-to-end-benchmarks) reflect post-warmup latencies on a single CPU-only machine. Stage 1 accounts for roughly 61% of total latency; Stage 2 compress + decompress together take about 70 ms per page.
+The numbers in [End-to-end benchmarks](#end-to-end-benchmarks) reflect post-warmup latencies on an **Apple M4 (CPU-only)** local machine. Stage 1 accounts for roughly 61% of total latency; Stage 2 compress + decompress together take about 70 ms per page. The hosted [Cloud Run demo](https://frontend-xnnzv4dy6q-uc.a.run.app/) runs on smaller shared infrastructure (2 vCPU / 2 GB per service, scale-to-zero) so per-request latency there is higher and the first request after idle incurs a multi-second cold start.
 
 ---
 
