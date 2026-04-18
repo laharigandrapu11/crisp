@@ -1,43 +1,55 @@
-import base64
-import io
-from typing import List
+import os
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from pipeline import ocr as run_ocr
+
+# Run with: uvicorn main:app --port 8000
+
 app = FastAPI()
+
+DEFAULT_RECOG_MODEL: Literal["cnn", "effnet"] = os.getenv("RECOG_MODEL", "cnn")
+
 
 class OCRRequest(BaseModel):
     image_base64: str
 
-class BBox(BaseModel):
-    bbox: List[int]
+
+class CharacterBox(BaseModel):
+    bbox: list[int]
+
 
 class OCRResponse(BaseModel):
     status: str
     extracted_text: str
     denoised_image: str
-    character_data: List[BBox]
+    character_data: list[CharacterBox]
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-@app.post("/ocr", response_model=OCRResponse)
+
+ERROR_RESPONSES: dict[int | str, dict] = {
+    400: {"description": "Invalid or missing base64 image input"},
+    500: {"description": "Unexpected inference error"},
+    503: {"description": "Required model weights are missing"},
+}
+
+
+@app.post("/ocr", response_model=OCRResponse, responses=ERROR_RESPONSES)
 def ocr(req: OCRRequest):
     if not req.image_base64:
         raise HTTPException(status_code=400, detail="image_base64 is required")
 
     try:
-        image_bytes = base64.b64decode(req.image_base64)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid base64 encoding")
-
-    if len(image_bytes) == 0:
-        raise HTTPException(status_code=400, detail="Image is empty")
-
-    try:
-        raise NotImplementedError
-    except NotImplementedError:
-        raise HTTPException(status_code=501, detail="OCR not yet implemented")
+        return run_ocr(req.image_base64, recog_model=DEFAULT_RECOG_MODEL)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=f"Model weights missing: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
