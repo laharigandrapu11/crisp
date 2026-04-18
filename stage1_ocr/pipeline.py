@@ -46,14 +46,6 @@ MODELS_DIR = Path(__file__).resolve().parent / "models"
 # denoising/train_denoising_autoencoder.ipynb for the exact IMG_SIZE.
 DENOISER_INPUT_SIZE = (540, 420)
 
-# EMNIST byclass label map, order = digits, uppercase, lowercase (62 classes).
-_LABEL_MAP_DEFAULT = (
-    [str(d) for d in range(10)]
-    + [chr(ord("A") + i) for i in range(26)]
-    + [chr(ord("a") + i) for i in range(26)]
-)
-
-
 class DenoisingAutoEncoder(nn.Module):
     """Mirror of the architecture defined in the training notebook."""
 
@@ -85,7 +77,14 @@ class DenoisingAutoEncoder(nn.Module):
 
 
 class RecognitionCNN(nn.Module):
-    """Mirror of the architecture defined in the CNN training notebook."""
+    """Mirror of the architecture defined in the CNN training notebook.
+
+    Must stay byte-identical (layer types, order, ``bias`` flags) to the
+    ``RecognitionCNN`` defined in ``recognition/train_recognition_cnn.ipynb``,
+    or ``load_state_dict`` will reject the checkpoint with missing/unexpected
+    keys. In particular: every ``Conv2d``/``Linear`` immediately followed by a
+    ``BatchNorm`` uses ``bias=False`` because BN's affine subsumes the bias.
+    """
 
     def __init__(
         self,
@@ -93,25 +92,30 @@ class RecognitionCNN(nn.Module):
         conv2_ch: int = 64,
         fc_dim: int = 128,
         dropout: float = 0.3,
-        num_classes: int = 62,
+        num_classes: int = 47,
     ) -> None:
         super().__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(1, conv1_ch, 3, padding=1),
+            nn.Conv2d(1, conv1_ch, 3, padding=1, bias=False),
+            nn.BatchNorm2d(conv1_ch),
             nn.ReLU(inplace=True),
-            nn.Conv2d(conv1_ch, conv1_ch, 3, padding=1),
+            nn.Conv2d(conv1_ch, conv1_ch, 3, padding=1, bias=False),
+            nn.BatchNorm2d(conv1_ch),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2),
-            nn.Conv2d(conv1_ch, conv2_ch, 3, padding=1),
+            nn.Conv2d(conv1_ch, conv2_ch, 3, padding=1, bias=False),
+            nn.BatchNorm2d(conv2_ch),
             nn.ReLU(inplace=True),
-            nn.Conv2d(conv2_ch, conv2_ch, 3, padding=1),
+            nn.Conv2d(conv2_ch, conv2_ch, 3, padding=1, bias=False),
+            nn.BatchNorm2d(conv2_ch),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2),
         )
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Dropout(dropout),
-            nn.Linear(conv2_ch * 7 * 7, fc_dim),
+            nn.Linear(conv2_ch * 7 * 7, fc_dim, bias=False),
+            nn.BatchNorm1d(fc_dim),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout),
             nn.Linear(fc_dim, num_classes),
@@ -170,21 +174,21 @@ def _load_recog_cnn() -> tuple[RecognitionCNN, dict[str, Any]]:
             "Run stage1_ocr/recognition/train_recognition_cnn.ipynb first."
         )
     ckpt = torch.load(weights_path, map_location=_pick_device())
-    params = ckpt.get("best_params", {})
+    params = ckpt["best_params"]
     model = RecognitionCNN(
-        conv1_ch=params.get("conv1_ch", 32),
-        conv2_ch=params.get("conv2_ch", 64),
-        fc_dim=params.get("fc_dim", 128),
-        dropout=params.get("dropout", 0.3),
-        num_classes=ckpt.get("num_classes", 62),
+        conv1_ch=params["conv1_ch"],
+        conv2_ch=params["conv2_ch"],
+        fc_dim=params["fc_dim"],
+        dropout=params["dropout"],
+        num_classes=ckpt["num_classes"],
     ).to(_pick_device())
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     meta = {
-        "label_map": ckpt.get("label_map", _LABEL_MAP_DEFAULT),
-        "img_size": ckpt.get("img_size", 28),
-        "mean": ckpt.get("mean", (0.1307,)),
-        "std": ckpt.get("std", (0.3081,)),
+        "label_map": ckpt["label_map"],
+        "img_size": ckpt["img_size"],
+        "mean": ckpt["mean"],
+        "std": ckpt["std"],
     }
     _recog_cnn_cache = (model, meta)
     return _recog_cnn_cache
@@ -216,7 +220,7 @@ def _load_recog_effnet() -> tuple[nn.Module, dict[str, Any]]:
 
     weights_meta = EfficientNet_B0_Weights.IMAGENET1K_V1.transforms()
     meta = {
-        "label_map": ckpt.get("label_map", _LABEL_MAP_DEFAULT),
+        "label_map": ckpt["label_map"],
         "input_size": ckpt.get("input_size", 96),
         "mean": tuple(ckpt.get("mean", weights_meta.mean)),
         "std": tuple(ckpt.get("std", weights_meta.std)),
