@@ -22,6 +22,21 @@ class Metrics(BaseModel):
 class CompressResponse(BaseModel):
     payload_base64: str = Field(..., description="Base64-encoded compressed bytes (use in /decompress)")
     metrics: Metrics
+    code_map: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Final {symbol: bit-string} mapping after all bytes have been encoded. "
+            "Reflects the tree's final state — codes used mid-stream differ because "
+            "the tree adapts on every byte. Non-printable bytes appear as \\xNN escapes."
+        ),
+    )
+    tree_structure: dict = Field(
+        default_factory=dict,
+        description=(
+            "Nested-dict of the final Huffman tree for d3 / visualisation. "
+            "Each node has {name, weight, number}; internal nodes add 'children'."
+        ),
+    )
 
 
 class DecompressResponse(BaseModel):

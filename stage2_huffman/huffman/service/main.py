@@ -34,20 +34,24 @@ def compress(req: CompressRequest) -> CompressResponse:
         raise HTTPException(status_code=400, detail="empty input")
 
     try:
-        raw_bytes, original_bytes, total_bits = vitter.compress(req.text)
+        raw_bytes, original_bytes, total_bits, tree = vitter.compress_with_tree(req.text)
     except Exception as exc:
         log.exception("compression failed")
         raise HTTPException(status_code=500, detail=f"compression failed: {exc}") from exc
 
     payload_b64 = base64.b64encode(raw_bytes).decode("ascii")
 
-    # Metrics computed on raw_bytes — do NOT recompute after base64 encoding.
     m = metrics_mod.compute_all(
         data=req.text.encode("utf-8"),
         raw_compressed=raw_bytes,
         total_bits_emitted=total_bits,
     )
-    return CompressResponse(payload_base64=payload_b64, metrics=Metrics(**m))
+    return CompressResponse(
+        payload_base64=payload_b64,
+        metrics=Metrics(**m),
+        code_map=tree.code_map(),
+        tree_structure=tree.to_dict(),
+    )
 
 
 @app.post("/decompress", response_model=DecompressResponse)

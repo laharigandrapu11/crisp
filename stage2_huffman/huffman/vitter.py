@@ -102,11 +102,33 @@ def decode(bits: str) -> bytes:
 
 
 def compress(text: str) -> tuple[bytes, int, int]:
-    """Returns (raw_bytes, original_bytes, total_bits_emitted). Measure ratio on raw_bytes."""
     from .bitpack import bits_to_bytes
     data = text.encode("utf-8")
     bit_string, total_bits = encode(data)
     return bits_to_bytes(bit_string), len(data), total_bits
+
+
+def compress_with_tree(text: str) -> tuple[bytes, int, int, HuffmanTree]:
+    from .bitpack import bits_to_bytes
+
+    data = text.encode("utf-8")
+    tree = HuffmanTree()
+    bits: list[str] = []
+
+    for byte in data:
+        leaf = tree.symbols_map.get(byte)
+        if leaf is not None:
+            bits.append(tree.path_from_root(leaf))
+            vitter_update(tree, leaf)
+        else:
+            bits.append(tree.path_from_root(tree.nyt))
+            bits.append(format(byte, "08b"))
+            new_leaf = tree.split_nyt(byte)
+            vitter_update(tree, new_leaf)
+
+    bit_string = "".join(bits)
+    raw_bytes = bits_to_bytes(bit_string)
+    return raw_bytes, len(data), len(bit_string), tree
 
 
 def decompress(raw_data: bytes) -> str:

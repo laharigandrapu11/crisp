@@ -38,7 +38,7 @@ class Node:
 
 
 class HuffmanTree:
-    MAX_NODES = 511  # 256 leaves + 255 internal nodes
+    MAX_NODES = 511
 
     def __init__(self) -> None:
         self._current_number = self.MAX_NODES
@@ -47,7 +47,6 @@ class HuffmanTree:
         self.symbols_map: dict[int, Node] = {}
 
     def path_from_root(self, node: Node) -> str:
-        """Returns '' for root — handles the first-symbol NYT edge case."""
         bits: list[str] = []
         current = node
         while current.parent is not None:
@@ -64,7 +63,6 @@ class HuffmanTree:
         exclude_a: Optional[Node] = None,
         exclude_b: Optional[Node] = None,
     ) -> Optional[Node]:
-        """Core primitive for Vitter's update — finds typed block leader."""
         best: Optional[Node] = None
         stack: list[Node] = [self.root]
         while stack:
@@ -80,7 +78,6 @@ class HuffmanTree:
         return best
 
     def find_typed_leader(self, node: Node) -> Node:
-        """Highest-numbered node in node's (weight, is_leaf) block. Returns node if already leader."""
         best = self.find_highest_in_block(
             weight=node.weight,
             is_leaf=node.is_leaf,
@@ -92,7 +89,6 @@ class HuffmanTree:
         return best
 
     def swap(self, a: Node, b: Node) -> None:
-        """Swap tree positions of a and b — each node keeps its own subtree."""
         if a is b:
             return
         if a is b.parent or b is a.parent:
@@ -114,15 +110,9 @@ class HuffmanTree:
         a.number, b.number = b.number, a.number
 
     def split_nyt(self, symbol: int) -> Node:
-        """
-        Expand NYT into internal node with two children:
-            left  = new NYT  (lower number)
-            right = new leaf (higher number)
-        Leaf gets higher number so leaves-before-internal holds after updates.
-        """
         old_nyt = self.nyt
 
-        new_leaf = Node(weight=0, number=self._current_number - 1, symbol=symbol,    parent=old_nyt)
+        new_leaf = Node(weight=0, number=self._current_number - 1, symbol=symbol,     parent=old_nyt)
         new_nyt  = Node(weight=0, number=self._current_number - 2, symbol=NYT_SYMBOL, parent=old_nyt)
         self._current_number -= 2
 
@@ -147,7 +137,6 @@ class HuffmanTree:
         return nodes
 
     def validate_invariants(self) -> None:
-        """Assert all 6 Vitter invariants. Call after every encode step in tests."""
         nodes = self.collect_nodes()
 
         for n in nodes:
@@ -180,6 +169,39 @@ class HuffmanTree:
             min_int_num  = min((n.number for n in group if not n.is_leaf), default=10**9)
             assert max_leaf_num < min_int_num, \
                 f"Vitter invariant violated at weight {w}: max leaf #{max_leaf_num} >= min internal #{min_int_num}"
+
+    @staticmethod
+    def _byte_to_display(b: int) -> str:
+        if 32 <= b <= 126:
+            return chr(b)
+        if b == 9:
+            return "\\t"
+        if b == 10:
+            return "\\n"
+        if b == 13:
+            return "\\r"
+        return f"\\x{b:02x}"
+
+    def code_map(self) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for byte, leaf in self.symbols_map.items():
+            result[self._byte_to_display(byte)] = self.path_from_root(leaf)
+        result["NYT"] = self.path_from_root(self.nyt)
+        return result
+
+    def to_dict(self) -> dict:
+        def build(node: Node) -> dict:
+            if node.is_leaf:
+                name = "NYT" if node.is_nyt else self._byte_to_display(node.symbol)
+                return {"name": name, "weight": node.weight, "number": node.number}
+            name = "root" if node is self.root else "internal"
+            return {
+                "name":     name,
+                "weight":   node.weight,
+                "number":   node.number,
+                "children": [build(node.left), build(node.right)],
+            }
+        return build(self.root)
 
     def print_tree(self) -> None:
         from collections import deque

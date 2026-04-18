@@ -1,5 +1,3 @@
-
-
 from __future__ import annotations
 
 import base64
@@ -110,7 +108,7 @@ class TestDecompressErrors:
     def test_random_bytes_dont_crash_the_server(self, client):
         garbage = base64.b64encode(b"\x00\xff\xaa\x55").decode()
         r = client.post("/decompress", json={"payload_base64": garbage})
-        assert r.status_code in (200, 400)  
+        assert r.status_code in (200, 400)
         if r.status_code == 400:
             assert "error" in r.json()
 
@@ -149,3 +147,61 @@ class TestStatelessness:
         _  = client.post("/compress", json={"text": "zzzzz"}).json()["payload_base64"]
         a2 = client.post("/compress", json={"text": "aaaaa"}).json()["payload_base64"]
         assert a1 == a2
+
+
+class TestInspectionFields:
+    def test_code_map_is_present(self, client):
+        body = client.post("/compress", json={"text": "abracadabra"}).json()
+        assert "code_map" in body
+        assert isinstance(body["code_map"], dict)
+
+    def test_code_map_contains_every_seen_symbol(self, client):
+        body = client.post("/compress", json={"text": "abracadabra"}).json()
+        for ch in "abrcd":
+            assert ch in body["code_map"], f"missing {ch!r} in code_map"
+        assert "NYT" in body["code_map"]
+
+    def test_code_map_values_are_bit_strings(self, client):
+        body = client.post("/compress", json={"text": "abracadabra"}).json()
+        for sym, code in body["code_map"].items():
+            assert isinstance(code, str)
+            assert all(c in "01" for c in code), \
+                f"code for {sym!r} contains non-bit characters: {code!r}"
+
+    def test_code_map_most_frequent_gets_shortest_code(self, client):
+        body = client.post("/compress", json={"text": "abracadabra"}).json()
+        codes = body["code_map"]
+        a_len = len(codes["a"])
+        for sym in ("b", "r", "c", "d"):
+            assert len(codes[sym]) >= a_len, \
+                f"{sym!r} (freq<5) has shorter code than 'a' (freq=5)"
+
+    def test_tree_structure_is_present(self, client):
+        body = client.post("/compress", json={"text": "abracadabra"}).json()
+        assert "tree_structure" in body
+        assert isinstance(body["tree_structure"], dict)
+
+    def test_tree_structure_root_shape(self, client):
+        body = client.post("/compress", json={"text": "abracadabra"}).json()
+        root = body["tree_structure"]
+        assert root["name"] == "root"
+        assert "weight" in root
+        assert "children" in root
+        assert len(root["children"]) == 2
+
+    def test_tree_root_weight_equals_input_length(self, client):
+        body = client.post("/compress", json={"text": "abracadabra"}).json()
+        assert body["tree_structure"]["weight"] == 11
+
+    def test_non_printable_bytes_use_hex_escape(self, client):
+        body = client.post("/compress", json={"text": "a\x00b"}).json()
+        keys = body["code_map"].keys()
+        assert any("\\x" in k or k == "\\x00" for k in keys) or "\x00" in keys
+
+    def test_single_symbol_input_has_minimal_tree(self, client):
+        body = client.post("/compress", json={"text": "a"}).json()
+        root = body["tree_structure"]
+        assert root["name"] == "root"
+        assert len(root["children"]) == 2
+        child_names = {c["name"] for c in root["children"]}
+        assert child_names == {"NYT", "a"}
