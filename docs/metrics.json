@@ -1,0 +1,409 @@
+{
+  "n": 20,
+  "lossless_pass_rate": 1.0,
+  "total_latency": {
+    "mean": 0.18163617849349975,
+    "min": 0.12671899795532227,
+    "max": 0.3205249309539795
+  },
+  "stage1_latency": {
+    "mean": 0.11152917146682739,
+    "min": 0.07915067672729492,
+    "max": 0.20585274696350098
+  },
+  "compress_latency": {
+    "mean": 0.038256609439849855,
+    "min": 0.022654056549072266,
+    "max": 0.07509613037109375
+  },
+  "decompress_latency": {
+    "mean": 0.03185039758682251,
+    "min": 0.02085113525390625,
+    "max": 0.0473170280456543
+  },
+  "mean_compression_ratio": 1.8788569,
+  "mean_entropy": 3.8309739,
+  "mean_encoding_efficiency": 0.8965132,
+  "results": [
+    {
+      "image": "FontLre_Clean_TE.png",
+      "lossless": true,
+      "text_length": 720,
+      "latency": {
+        "stage1": 0.20585274696350098,
+        "compress": 0.07509613037109375,
+        "decompress": 0.039576053619384766,
+        "total": 0.3205249309539795
+      },
+      "metrics": {
+        "original_bytes": 720,
+        "compressed_bytes": 342,
+        "compression_ratio": 2.105263,
+        "entropy": 3.329914,
+        "avg_bits_per_symbol": 3.790278,
+        "encoding_efficiency": 0.878541
+      }
+    },
+    {
+      "image": "FontLre_Clean_TR.png",
+      "lossless": true,
+      "text_length": 656,
+      "latency": {
+        "stage1": 0.15300202369689941,
+        "compress": 0.05003070831298828,
+        "decompress": 0.0473170280456543,
+        "total": 0.250349760055542
+      },
+      "metrics": {
+        "original_bytes": 656,
+        "compressed_bytes": 339,
+        "compression_ratio": 1.935103,
+        "entropy": 3.670321,
+        "avg_bits_per_symbol": 4.121951,
+        "encoding_efficiency": 0.890433
+      }
+    },
+    {
+      "image": "FontLre_Clean_VA.png",
+      "lossless": true,
+      "text_length": 731,
+      "latency": {
+        "stage1": 0.14200592041015625,
+        "compress": 0.04543805122375488,
+        "decompress": 0.04027414321899414,
+        "total": 0.22771811485290527
+      },
+      "metrics": {
+        "original_bytes": 731,
+        "compressed_bytes": 330,
+        "compression_ratio": 2.215152,
+        "entropy": 3.228225,
+        "avg_bits_per_symbol": 3.606019,
+        "encoding_efficiency": 0.895232
+      }
+    },
+    {
+      "image": "Fontfre_Clean_TE.png",
+      "lossless": true,
+      "text_length": 544,
+      "latency": {
+        "stage1": 0.09807610511779785,
+        "compress": 0.037242889404296875,
+        "decompress": 0.030472278594970703,
+        "total": 0.16579127311706543
+      },
+      "metrics": {
+        "original_bytes": 544,
+        "compressed_bytes": 332,
+        "compression_ratio": 1.638554,
+        "entropy": 4.222899,
+        "avg_bits_per_symbol": 4.873162,
+        "encoding_efficiency": 0.866563
+      }
+    },
+    {
+      "image": "Fontfre_Clean_TR.png",
+      "lossless": true,
+      "text_length": 512,
+      "latency": {
+        "stage1": 0.07915067672729492,
+        "compress": 0.024435997009277344,
+        "decompress": 0.02313232421875,
+        "total": 0.12671899795532227
+      },
+      "metrics": {
+        "original_bytes": 512,
+        "compressed_bytes": 283,
+        "compression_ratio": 1.809187,
+        "entropy": 3.837205,
+        "avg_bits_per_symbol": 4.40625,
+        "encoding_efficiency": 0.870855
+      }
+    },
+    {
+      "image": "Fontfre_Clean_VA.png",
+      "lossless": true,
+      "text_length": 515,
+      "latency": {
+        "stage1": 0.08685898780822754,
+        "compress": 0.02911686897277832,
+        "decompress": 0.027709007263183594,
+        "total": 0.14368486404418945
+      },
+      "metrics": {
+        "original_bytes": 515,
+        "compressed_bytes": 306,
+        "compression_ratio": 1.683007,
+        "entropy": 4.086565,
+        "avg_bits_per_symbol": 4.739806,
+        "encoding_efficiency": 0.86218
+      }
+    },
+    {
+      "image": "Fontfrm_Clean_TE.png",
+      "lossless": true,
+      "text_length": 704,
+      "latency": {
+        "stage1": 0.09326910972595215,
+        "compress": 0.042955875396728516,
+        "decompress": 0.038578033447265625,
+        "total": 0.1748030185699463
+      },
+      "metrics": {
+        "original_bytes": 704,
+        "compressed_bytes": 420,
+        "compression_ratio": 1.67619,
+        "entropy": 4.26235,
+        "avg_bits_per_symbol": 4.759943,
+        "encoding_efficiency": 0.895462
+      }
+    },
+    {
+      "image": "Fontfrm_Clean_TR.png",
+      "lossless": true,
+      "text_length": 709,
+      "latency": {
+        "stage1": 0.09023404121398926,
+        "compress": 0.03821897506713867,
+        "decompress": 0.037284135818481445,
+        "total": 0.16573715209960938
+      },
+      "metrics": {
+        "original_bytes": 709,
+        "compressed_bytes": 421,
+        "compression_ratio": 1.684086,
+        "entropy": 4.230518,
+        "avg_bits_per_symbol": 4.744711,
+        "encoding_efficiency": 0.891628
+      }
+    },
+    {
+      "image": "Fontfsm_Noisep_VA.png",
+      "lossless": true,
+      "text_length": 741,
+      "latency": {
+        "stage1": 0.09979510307312012,
+        "compress": 0.03176403045654297,
+        "decompress": 0.03927874565124512,
+        "total": 0.1708378791809082
+      },
+      "metrics": {
+        "original_bytes": 741,
+        "compressed_bytes": 393,
+        "compression_ratio": 1.885496,
+        "entropy": 3.811682,
+        "avg_bits_per_symbol": 4.234818,
+        "encoding_efficiency": 0.900082
+      }
+    },
+    {
+      "image": "Fontfsm_Noisew_TE.png",
+      "lossless": true,
+      "text_length": 758,
+      "latency": {
+        "stage1": 0.10417485237121582,
+        "compress": 0.03468632698059082,
+        "decompress": 0.03364992141723633,
+        "total": 0.17251110076904297
+      },
+      "metrics": {
+        "original_bytes": 758,
+        "compressed_bytes": 419,
+        "compression_ratio": 1.809069,
+        "entropy": 3.984156,
+        "avg_bits_per_symbol": 4.412929,
+        "encoding_efficiency": 0.902837
+      }
+    },
+    {
+      "image": "Fontfsm_Noisew_TR.png",
+      "lossless": true,
+      "text_length": 775,
+      "latency": {
+        "stage1": 0.10190176963806152,
+        "compress": 0.03894400596618652,
+        "decompress": 0.037896156311035156,
+        "total": 0.1787419319152832
+      },
+      "metrics": {
+        "original_bytes": 775,
+        "compressed_bytes": 430,
+        "compression_ratio": 1.802326,
+        "entropy": 3.994903,
+        "avg_bits_per_symbol": 4.430968,
+        "encoding_efficiency": 0.901587
+      }
+    },
+    {
+      "image": "Fontfsm_Noisew_VA.png",
+      "lossless": true,
+      "text_length": 739,
+      "latency": {
+        "stage1": 0.09532308578491211,
+        "compress": 0.03171396255493164,
+        "decompress": 0.030519962310791016,
+        "total": 0.15755701065063477
+      },
+      "metrics": {
+        "original_bytes": 739,
+        "compressed_bytes": 391,
+        "compression_ratio": 1.890026,
+        "entropy": 3.800727,
+        "avg_bits_per_symbol": 4.224628,
+        "encoding_efficiency": 0.89966
+      }
+    },
+    {
+      "image": "Fontfte_Noisec_TE.png",
+      "lossless": true,
+      "text_length": 636,
+      "latency": {
+        "stage1": 0.09025716781616211,
+        "compress": 0.030662059783935547,
+        "decompress": 0.029638051986694336,
+        "total": 0.150557279586792
+      },
+      "metrics": {
+        "original_bytes": 636,
+        "compressed_bytes": 364,
+        "compression_ratio": 1.747253,
+        "entropy": 4.062375,
+        "avg_bits_per_symbol": 4.570755,
+        "encoding_efficiency": 0.888776
+      }
+    },
+    {
+      "image": "Fontftm_Clean_TR.png",
+      "lossless": true,
+      "text_length": 604,
+      "latency": {
+        "stage1": 0.09541893005371094,
+        "compress": 0.024437904357910156,
+        "decompress": 0.0239412784576416,
+        "total": 0.1437981128692627
+      },
+      "metrics": {
+        "original_bytes": 604,
+        "compressed_bytes": 326,
+        "compression_ratio": 1.852761,
+        "entropy": 3.856041,
+        "avg_bits_per_symbol": 4.306291,
+        "encoding_efficiency": 0.895444
+      }
+    },
+    {
+      "image": "Fontftm_Clean_VA.png",
+      "lossless": true,
+      "text_length": 587,
+      "latency": {
+        "stage1": 0.10114789009094238,
+        "compress": 0.022654056549072266,
+        "decompress": 0.02085113525390625,
+        "total": 0.1446530818939209
+      },
+      "metrics": {
+        "original_bytes": 587,
+        "compressed_bytes": 309,
+        "compression_ratio": 1.899676,
+        "entropy": 3.720046,
+        "avg_bits_per_symbol": 4.197615,
+        "encoding_efficiency": 0.886228
+      }
+    },
+    {
+      "image": "Fontnte_Clean_TR.png",
+      "lossless": true,
+      "text_length": 865,
+      "latency": {
+        "stage1": 0.11417698860168457,
+        "compress": 0.04304695129394531,
+        "decompress": 0.03135514259338379,
+        "total": 0.18857908248901367
+      },
+      "metrics": {
+        "original_bytes": 865,
+        "compressed_bytes": 437,
+        "compression_ratio": 1.979405,
+        "entropy": 3.718737,
+        "avg_bits_per_symbol": 4.03815,
+        "encoding_efficiency": 0.920901
+      }
+    },
+    {
+      "image": "Fontnte_Clean_VA.png",
+      "lossless": true,
+      "text_length": 811,
+      "latency": {
+        "stage1": 0.10920000076293945,
+        "compress": 0.03904581069946289,
+        "decompress": 0.030768156051635742,
+        "total": 0.17901396751403809
+      },
+      "metrics": {
+        "original_bytes": 811,
+        "compressed_bytes": 425,
+        "compression_ratio": 1.908235,
+        "entropy": 3.846998,
+        "avg_bits_per_symbol": 4.188656,
+        "encoding_efficiency": 0.918433
+      }
+    },
+    {
+      "image": "Fontntm_Clean_TE.png",
+      "lossless": true,
+      "text_length": 773,
+      "latency": {
+        "stage1": 0.10780811309814453,
+        "compress": 0.03322768211364746,
+        "decompress": 0.024402141571044922,
+        "total": 0.16543793678283691
+      },
+      "metrics": {
+        "original_bytes": 773,
+        "compressed_bytes": 376,
+        "compression_ratio": 2.055851,
+        "entropy": 3.591525,
+        "avg_bits_per_symbol": 3.884864,
+        "encoding_efficiency": 0.924492
+      }
+    },
+    {
+      "image": "Fontntm_Clean_TR.png",
+      "lossless": true,
+      "text_length": 687,
+      "latency": {
+        "stage1": 0.11560297012329102,
+        "compress": 0.04320788383483887,
+        "decompress": 0.02524423599243164,
+        "total": 0.18405508995056152
+      },
+      "metrics": {
+        "original_bytes": 687,
+        "compressed_bytes": 359,
+        "compression_ratio": 1.913649,
+        "entropy": 3.811194,
+        "avg_bits_per_symbol": 4.174672,
+        "encoding_efficiency": 0.912932
+      }
+    },
+    {
+      "image": "Fontntm_Clean_VA.png",
+      "lossless": true,
+      "text_length": 841,
+      "latency": {
+        "stage1": 0.14732694625854492,
+        "compress": 0.04920601844787598,
+        "decompress": 0.025120019912719727,
+        "total": 0.22165298461914062
+      },
+      "metrics": {
+        "original_bytes": 841,
+        "compressed_bytes": 403,
+        "compression_ratio": 2.086849,
+        "entropy": 3.553097,
+        "avg_bits_per_symbol": 3.828775,
+        "encoding_efficiency": 0.927998
+      }
+    }
+  ]
+}
