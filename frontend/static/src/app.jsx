@@ -116,7 +116,7 @@ function App(){
             <section className="panel">
               <div className="panel-head">
                 <span className="title">Upload image</span>
-                <span className="meta">PNG · JPG · ≤ 5 MB</span>
+                <span className="meta">PNG · JPG</span>
               </div>
               <div className="panel-body">
                 <div
