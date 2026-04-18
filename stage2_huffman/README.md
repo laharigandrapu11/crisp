@@ -59,9 +59,32 @@ pip install -r requirements.txt
 
 ```bash
 cd stage2_huffman
-docker build -t stage2-huffman .
-docker run -p 8001:8001 stage2-huffman
+docker build -t crisp-stage2 .
+docker run --rm -p 8080:8080 crisp-stage2
+# Or pick a different port:
+# docker run --rm -e PORT=8001 -p 8001:8001 crisp-stage2
 ```
+
+The container listens on `$PORT` (default `8080`, the Cloud Run convention).
+The image is a multi-stage `python:3.11-slim` build that:
+
+- installs only the three pure-Python deps (`fastapi`, `pydantic`, `uvicorn`),
+- runs as a non-root `app` user.
+
+Stage 2 has no model weights and no native deps, so the image is small and
+cold starts are quick.
+
+### Deploy to Google Cloud Run
+
+```bash
+cd stage2_huffman
+export GCP_PROJECT_ID=my-gcp-project
+./deploy_cloudrun.sh
+```
+
+The script builds the image with Cloud Build, pushes to Artifact Registry,
+and deploys to Cloud Run. Defaults (region, CPU/memory, concurrency, etc.)
+are at the top of the script.
 
 ---
 

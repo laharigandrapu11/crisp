@@ -27,8 +27,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
     PORT=8080
 
-# Pure-Python service, so no system libs needed beyond what python:slim ships.
-# Just create the non-root user we'll run as.
+# Pure-Python proxy + static file server, so no system libs needed beyond
+# what python:slim ships. Just create the non-root user we'll run as.
 RUN useradd --create-home --uid 1001 app
 
 WORKDIR /app
@@ -42,4 +42,4 @@ EXPOSE 8080
 
 # Cloud Run injects $PORT. Single worker — Cloud Run scales by spawning more
 # container instances, not workers.
-CMD exec uvicorn huffman.service.main:app --host 0.0.0.0 --port "${PORT}" --workers 1
+CMD exec uvicorn server:app --host 0.0.0.0 --port "${PORT}" --workers 1

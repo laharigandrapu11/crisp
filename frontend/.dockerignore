@@ -11,12 +11,6 @@
 **/.mypy_cache
 **/.ipynb_checkpoints
 
-# Notebooks and training-only assets are not needed at serving time.
-**/*.ipynb
-denoising/data/
-recognition/data/
-segmentation/test_output/
-
 # Local artefacts that should never end up in the image.
 *.log
 *.tmp

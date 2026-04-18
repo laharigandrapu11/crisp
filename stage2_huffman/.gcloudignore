@@ -1,0 +1,28 @@
+# Controls what `gcloud builds submit` uploads as the build context.
+# Mirrors .dockerignore so we don't upload caches, tests, etc.
+#
+# Without this file, gcloud falls back to .gitignore (or uploads EVERYTHING
+# if there isn't one).
+
+.gcloudignore
+.git
+.gitignore
+.gitkeep
+
+.DS_Store
+.env
+.venv
+
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.mypy_cache
+**/.ipynb_checkpoints
+
+# Tests aren't needed at serving time.
+tests/
+
+# Local artefacts that should never end up in the build context.
+*.log
+*.tmp

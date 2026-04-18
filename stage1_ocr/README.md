@@ -20,6 +20,7 @@ This stage is the **producer** for Stage 2 (Huffman compression) in the wider
 7. [Usage](#usage)
    - [Run the API server](#run-the-api-server)
    - [Docker](#docker)
+   - [Deploy to Google Cloud Run](#deploy-to-google-cloud-run)
    - [Retraining the models](#retraining-the-models)
    - [Standalone segmentation CLI](#standalone-segmentation-cli)
 8. [API reference](#api-reference)
@@ -381,12 +382,35 @@ curl -s -X POST http://localhost:8000/ocr \
 ```bash
 cd stage1_ocr
 docker build -t crisp-stage1 .
-docker run --rm -p 8000:8000 crisp-stage1
+docker run --rm -p 8080:8080 crisp-stage1
+# Or pick a different port:
+# docker run --rm -e PORT=9000 -p 9000:9000 crisp-stage1
 ```
 
-The image is `python:3.10-slim` + `requirements.txt` + the source. Weights are
-copied in via `COPY . .`, so make sure `models/*.pt` exists locally before
-building.
+The container listens on `$PORT` (default `8080`, the Cloud Run convention).
+The image is a multi-stage `python:3.11-slim` build that:
+
+- installs **CPU-only** `torch` / `torchvision` from the PyTorch CPU index
+  (the default PyPI wheels pull in the CUDA runtime — useless on Cloud Run
+  and ~5× larger),
+- swaps `opencv-python` for `opencv-python-headless` to avoid GUI deps,
+- runs as a non-root `app` user.
+
+Weights are copied in via `COPY . .`, so make sure `models/*.pt` exists locally
+before building.
+
+### Deploy to Google Cloud Run
+
+```bash
+cd stage1_ocr
+export GCP_PROJECT_ID=my-gcp-project
+./deploy_cloudrun.sh
+```
+
+The script builds with Cloud Build, pushes to Artifact Registry, and deploys
+to Cloud Run. See the comments at the top of `deploy_cloudrun.sh` for one-time
+setup (`gcloud auth login`, enabling APIs, creating the Artifact Registry repo)
+and the env vars you can override (region, CPU/memory, scaling).
 
 ### Retraining the models
 
