@@ -38,7 +38,7 @@ class Node:
 
 
 class HuffmanTree:
-    MAX_NODES = 511
+    MAX_NODES = 513
 
     def __init__(self) -> None:
         self._current_number = self.MAX_NODES
