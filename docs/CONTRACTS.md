@@ -4,7 +4,7 @@ These are the agreed JSON shapes for both services. Do NOT change them without t
 
 ---
 
-## Stage 1 — OCR Service (Person A)
+## Stage 1 — OCR Service
 
 **Endpoint:** `POST http://localhost:8000/ocr`
 
@@ -31,7 +31,7 @@ These are the agreed JSON shapes for both services. Do NOT change them without t
 
 ---
 
-## Stage 2 — Compression Service (Person B)
+## Stage 2 — Compression Service
 
 **Endpoint:** `POST http://localhost:8001/compress`
 
